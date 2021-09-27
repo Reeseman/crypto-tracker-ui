@@ -1,0 +1,172 @@
+[
+    {
+        "coin": "OMG",
+        "usd_spent": 666,
+        "amount": 198.4534
+    },
+    {
+        "coin": "ETH",
+        "usd_spent": 3939,
+        "amount": 12.3
+    },
+    {
+        "coin": "XTZ",
+        "usd_spent": 3000,
+        "amount": 1539.5
+    },
+    {
+        "coin": "XTZ",
+        "usd_spent": 3000,
+        "amount": 1200.51
+    },
+    {
+        "coin": "XTZ",
+        "usd_spent": 0,
+        "amount": 99.28
+    },
+    {
+        "coin": "ETH",
+        "usd_spent": 500,
+        "amount": 2.6971
+    },
+    {
+        "coin": "ETH",
+        "usd_spent": 500,
+        "amount": 2.656
+    },
+    {
+        "coin": "ETH",
+        "usd_spent": 1000,
+        "amount": 5.5102
+    },
+    {
+        "coin": "LINK",
+        "usd_spent": 681,
+        "amount": 275.218
+    },
+    {
+        "coin": "LINK",
+        "usd_spent": 1500,
+        "amount": 607.6
+    },
+    {
+        "coin": "LINK",
+        "usd_spent": 3000,
+        "amount": 875.82
+    },
+    {
+        "coin": "LINK",
+        "usd_spent": 0,
+        "amount": -351
+    },
+{
+"coin": "BTC",
+"usd_spent": 500,
+"amount": 0.01334
+},
+{
+"coin": "BTC",
+"usd_spent": 1000,
+"amount": 0.0312
+},
+{
+"coin": "LTC",
+"usd_spent": 5000,
+"amount": 32.05
+},
+{
+"coin": "LTC",
+"usd_spent": 500,
+"amount": 2.74
+},
+{
+"coin": "LTC",
+"usd_spent": 1000,
+"amount":8.2522
+},
+{
+"coin": "BCH",
+"usd_spent": 3000,
+"amount": 3.1626
+},
+{
+"coin": "BCH",
+"usd_spent": 1000,
+"amount":2.2239
+},
+{
+"coin": "BCH",
+"usd_spent": 1000,
+"amount":1.98
+},
+{
+"coin": "ZEC",
+"usd_spent": 5000,
+"amount": 51.3468
+},
+{
+"coin": "ZEC",
+"usd_spent": 5000,
+"amount": 20.4936
+},
+{
+"coin": "ZEC",
+"usd_spent": 1000,
+"amount":9.514
+},
+{
+"coin": "ZEC",
+"usd_spent": 2000,
+"amount":18.64
+},
+{
+"coin": "DASH",
+"usd_spent": 3000,
+"amount": 9.5
+},
+{
+"coin": "DASH",
+"usd_spent": 1000,
+"amount":7.49
+},
+{
+"coin": "DASH",
+"usd_spent": 1000,
+"amount":7.592
+},
+{
+"coin": "EOS",
+"usd_spent": 3000,
+"amount": 431.3443
+},
+{
+"coin": "EOS",
+"usd_spent": 1000,
+"amount":250.54
+},
+{
+"coin": "EOS",
+"usd_spent": 1000,
+"amount":270.458
+},
+{
+"coin": "EOS",
+"usd_spent": 1000,
+"amount":264.26
+},
+{
+ "coin": "GRT",
+ "amount":470.315,
+ "usd_spent": 500
+},
+{
+ "coin": "FET",
+ "amount":878.98,
+ "usd_spent": 500
+},
+{
+ "coin": "OGN",
+ "amount":471.355,
+ "usd_spent": 500
+}
+]
