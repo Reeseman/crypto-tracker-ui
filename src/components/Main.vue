@@ -4,15 +4,28 @@
 
     <h2>Today's Summary</h2>
     <div class="totals">
-      <div><b>Total Investment:</b> ${{ totalInvestment }}</div>
-      <!-- <div><b>Current Worth:</b> ${{ currentWorth }}</div> -->
-      <div><b>Current Worth After Tax:</b> ${{ currentWorthAfterTax }}</div>
-      <!-- <div><b>Total Profits:</b> ${{ totalProfits }}</div> -->
-      <div><b>Total Profits After Tax:</b> ${{ totalProfitsAfterTax }}</div>
+      <div>
+        <b>Total Investment: </b>
+        {{ formatMoney(todayAggregate.initialUsd) }}
+      </div>
+      <div>
+        <b>Current Worth After Tax: </b>
+        {{ formatMoney(todayAggregate.initialUsd + (todayAggregate.currentUsd - todayAggregate.initialUsd) * (1 - estimatedTaxRate)) }}
+      </div>
+      <div>
+        <b>Total Profits After Tax: </b>
+        {{ formatMoney((todayAggregate.currentUsd - todayAggregate.initialUsd) * (1 - estimatedTaxRate)) }}
+      </div>
 
       <div>&nbsp;</div>
-      <div><b>Total Target Profits:</b> ${{ totalTargetProfits }}</div>
-      <div><b>Final Target Worth:</b> ${{ finalTargetWorth }}</div>
+      <div>
+        <b>Total Target Profits: </b>
+        {{ formatMoney((todayAggregate.ifAllGoesWell * (1 - estimatedTaxRate) + todayAggregate.initialUsd) - todayAggregate.initialUsd) }}
+      </div>
+      <div>
+        <b>Final Target Worth: </b>
+        {{ formatMoney(todayAggregate.ifAllGoesWell * (1 - estimatedTaxRate) + todayAggregate.initialUsd) }}
+      </div>
     </div>
     <h3 style='margin-bottom: 0;'>Breakdown</h3>
     <table class="todayAggregate">
@@ -33,19 +46,19 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(value, key, index) in todayAggregate" :key="index">
+        <tr v-for="(value, key, index) in todayAggregate.breakdown" :key="index">
           <td><b>{{ key }}</b></td>
           <td>{{ value.total_coin.toFixed(2) }}</td>
-          <td>{{ numberWithCommas(value.Investment) }}</td>
-          <td>{{ numberWithCommas(value['Current Value']) }}</td>
-          <td>{{ numberWithCommas(value['Cost Basis']) }}</td>
-          <td>{{ numberWithCommas(value['Target Price']) }}</td>
-          <td>{{ numberWithCommas(value['Current Price']) }}</td>
+          <td>{{ formatMoney(value.usd_spent) }}</td>
+          <td>{{ formatMoney(value['Current Value']) }}</td>
+          <td>{{ formatMoney(value['Cost Basis']) }}</td>
+          <td>{{ formatMoney(value['Target Price']) }}</td>
+          <td>{{ formatMoney(value['Current Price']) }}</td>
           <td>{{ value['Target Mult'] }}</td>
           <td>{{ value['Progress'] }}</td>
-          <td>{{ value['Multiplier'] }}</td>
-          <td>{{ value['Target Profit'] }}</td>
-          <td>{{ value['Total Profit'] }}</td>
+          <td>{{ value['Multiplier'].toFixed(2) }}</td>
+          <td>{{ formatMoney(targets[key] * value['total_coin'] - value['usd_spent']) }}</td>
+          <td>{{ formatMoney(value['Current Value'] - value['usd_spent']) }}</td>
         </tr>
       </tbody>
     </table>
@@ -97,13 +110,7 @@
         purchases,
         calculations,
         todayAggregate: {},
-        totalTargetProfits: 0,
-        finalTargetWorth: 0,
-        totalInvestment: 0,
-        currentWorth: 0,
-        currentWorthAfterTax: 0,
-        totalProfits: 0,
-        totalProfitsAfterTax: 0,
+        estimatedTaxRate: 0.2,
       };
     },
     methods: {
@@ -111,6 +118,9 @@
         var parts = x.toString().split(".");
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         return parts.join(".");
+      },
+      formatMoney(x) {
+        return x === undefined ? null : `$${this.numberWithCommas(x.toFixed(2))}`;
       },
       sortAggByMultiplier(aggregate) {
           var newAgg = {}
@@ -132,89 +142,84 @@
       turnCryptoIntoUsd(converter, cryptoAmount) {
         return cryptoAmount * (1.0 / converter);
       },
-    },
-    beforeCreate() {
-      var todayKeyStr = this.$moment().format('YYYYMMMMDh');
-      if (!calculations[todayKeyStr]) {
-        var aggregate = {};
+      appendPurchase(data, purchase) {
+        purchase.coin = purchase.coin.toUpperCase();
+        if (data.aggregate[purchase.coin] == undefined) {
+          data.aggregate[purchase.coin] = {}
+          data.aggregate[purchase.coin].usd_spent = 0;
+          data.aggregate[purchase.coin].total_coin = 0;
+          data.aggregate[purchase.coin].name = purchase.coin;
+          data.aggregate[purchase.coin]['Target Price'] = targets[purchase.coin] == undefined ? null : targets[purchase.coin];
+        }
+        data.initialUsd += Number(purchase.usd_spent);
+        data.aggregate[purchase.coin].usd_spent += purchase.usd_spent;
+        data.aggregate[purchase.coin].total_coin += purchase.amount;
+        return data;
+      },
+      aggregatePurchases(data, prices) {
+        for (const key in data.aggregate) {
+          var coinInfo = data.aggregate[key];
+          const price = 1 / prices[coinInfo['name']];
+          coinInfo['Current Price'] = price;
+          const costBasis = coinInfo['usd_spent']/coinInfo['total_coin'];
+          coinInfo['Cost Basis'] = costBasis;
+          coinInfo['Multiplier'] = (price / (coinInfo['usd_spent']/coinInfo['total_coin']));
+          coinInfo['Target Mult'] = (targets[key] / (coinInfo['usd_spent']/coinInfo['total_coin'])).toFixed(2);
+          coinInfo['Progress'] = `${Math.round(100 * (price - costBasis) / (targets[key] - costBasis))}%`;
+          const coinInUsd = this.turnCryptoIntoUsd(prices[coinInfo['name']], coinInfo['total_coin']);
+          coinInfo['Current Value'] = coinInUsd;
+          data.currentUsd += coinInUsd;
+          const profit = targets[key] * data.aggregate[key]['total_coin'] - data.aggregate[key]['usd_spent'];
+          data.ifAllGoesWell += profit;
+        }
+        return data;
+      },
+      async getFromApi() {
+
+        let data = {aggregate: {}, currentUsd: 0, initialUsd: 0, ifAllGoesWell: 0};
         for (var i = 0; i < purchases.length; i++) {
-            var purchase = purchases[i];
-            purchase.coin = purchase.coin.toUpperCase();
-            if (aggregate[`${purchase.coin}`] == undefined) {
-                aggregate[`${purchase.coin}`] = {}
-            }
+          data = this.appendPurchase(data, purchases[i]);
         }
 
+        let body = await this.getCryptoCompare(data.aggregate);
+        if (body === '') {
+          body = await this.getCoinbase();
+        }
+        data = this.aggregatePurchases(data, body);
+
+        this.todayAggregate = {
+          breakdown: this.sortAggByMultiplier(data.aggregate),
+          initialUsd: data.initialUsd,
+          currentUsd: data.currentUsd,
+          ifAllGoesWell: data.ifAllGoesWell,
+        };
+      },
+      async getCryptoCompare(aggregate) {
         var tsymsRequestValue = '';
         for (const key in aggregate) {
             tsymsRequestValue += key + ',';
         }
 
-        const apiRequest = "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=" + tsymsRequestValue;
-        console.log(apiRequest);
-        this.$axios.get(apiRequest).then((response) => {
-          var currentUsd = 0;
-          var initialUsd = 0;
-
-          var aggregate = {};
-          for (var i = 0; i < purchases.length; i++) {
-              var purchase = purchases[i];
-              purchase.coin = purchase.coin.toUpperCase();
-              if (aggregate[`${purchase.coin}`] == undefined) {
-                  aggregate[`${purchase.coin}`] = {}
-                  aggregate[`${purchase.coin}`].usd_spent = 0;
-                  aggregate[`${purchase.coin}`].total_coin = 0;
-                  aggregate[`${purchase.coin}`].name = purchase.coin;
-                  aggregate[`${purchase.coin}`]['Target Price'] = targets[purchase.coin] == undefined ? null : '$' + targets[purchase.coin];
-              }
-              aggregate[`${purchase.coin}`].usd_spent += purchase.usd_spent;
-              aggregate[`${purchase.coin}`].total_coin += purchase.amount;
-              initialUsd += purchase.usd_spent;
-          }
-          var body = response.data;
-          var ifAllGoesWell = 0;
-          for (const key in aggregate) {
-            var coinInfo = aggregate[key];
-            coinInfo['Coins'] = coinInfo['total_coin'].toFixed(4);
-            const price = 1/body[coinInfo['name']];
-            coinInfo['Current Price'] = '$' + price.toFixed(2);
-            const costBasis = coinInfo['usd_spent']/coinInfo['total_coin'];
-            coinInfo['Cost Basis'] = '$' + costBasis.toFixed(2);
-            coinInfo['Multiplier'] = (price / (coinInfo['usd_spent']/coinInfo['total_coin'])).toFixed(2);
-            coinInfo['Target Mult'] = (targets[key] / (coinInfo['usd_spent']/coinInfo['total_coin'])).toFixed(2);
-            coinInfo['Progress'] = `${Math.round(100 * (price - costBasis) / (targets[key] - costBasis))}%`;
-            const coinInUsd = this.turnCryptoIntoUsd(body[coinInfo['name']], coinInfo['total_coin']);
-            coinInfo['Current Value'] = coinInUsd.toFixed(2);
-            currentUsd += coinInUsd;
-          }
-
-          for (const key in aggregate) {
-            aggregate[key]['Total Profit'] = '$' + this.numberWithCommas((aggregate[key]['Current Value'] - aggregate[key]['usd_spent']).toFixed(0));
-            const profit = targets[key] * aggregate[key]['Coins'] - aggregate[key]['usd_spent'];
-            aggregate[key]['Target Profit'] = '$' + this.numberWithCommas(profit.toFixed(0));
-            ifAllGoesWell += profit;
-            aggregate[key]['Current Value'] = '$' + aggregate[key]['Current Value']
-            aggregate[key]['Investment'] = '$' + aggregate[key]['usd_spent'];
-          }
-          this.todayAggregate = this.sortAggByMultiplier(aggregate);
-
-        // totalProfits: 0,
-        // totalProfitsAfterTax: 0,
-          const ESTIMATED_TAX_RATE = 0.2;
-
-          const ifAllGoesWellTaxed = ifAllGoesWell * (1 - ESTIMATED_TAX_RATE);
-          this.totalTargetProfits = this.numberWithCommas(ifAllGoesWellTaxed.toFixed(2));
-          this.finalTargetWorth = this.numberWithCommas((ifAllGoesWellTaxed + initialUsd).toFixed(2));
-          this.totalInvestment = this.numberWithCommas(initialUsd.toFixed(2));
-          this.currentWorth = this.numberWithCommas(currentUsd.toFixed(2));
-          const curRealWorth = (initialUsd + (currentUsd - initialUsd) * (1 - ESTIMATED_TAX_RATE)).toFixed(2);
-          this.currentWorthAfterTax = this.numberWithCommas(curRealWorth);
-
-          const totalGains = (currentUsd - initialUsd).toFixed(2);
-          this.totalProfits = this.numberWithCommas(totalGains);
-          const posttaxGains = (currentUsd - initialUsd) * (1 - ESTIMATED_TAX_RATE);
-          this.totalProfitsAfterTax = this.numberWithCommas(posttaxGains.toFixed(2));
-        });
+        const url = "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=" + tsymsRequestValue;
+        let output = '';
+        await this.$axios.get(url).then(function (response) {
+          output = response.data;
+        }.bind(this)).catch(function (error) {console.log('ajax get branches error' + error); });
+        return output;
+      },
+      async getCoinbase() {
+        const url = 'https://api.coinbase.com/v2/exchange-rates?currency=usd'
+        let output = '';
+        await this.$axios.get(url).then(function (response) {
+          output = response.data.data.rates;
+        }.bind(this)).catch(function (error) {console.log('ajax get branches error' + error); });
+        return output;
+      }
+    },
+    created() {
+      const todayKeyStr = this.$moment().format('YYYY-MM-DD');
+      if (!calculations[todayKeyStr]) {
+        this.getFromApi();
       } else {
         this.todayAggregate = calculations[todayKeyStr];
       }

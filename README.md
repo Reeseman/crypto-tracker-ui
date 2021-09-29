@@ -1,5 +1,7 @@
 # crypto-app
 
+Version 2 of the CLI version. Now can use a nice web app too. 
+
 ## Project setup
 ```
 yarn install
